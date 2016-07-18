@@ -279,7 +279,7 @@ func (f *file) ReadAt(b []byte, off int64) (n int, err error) {
 		rem = int(avail)
 		err = io.EOF
 	}
-	for rem != 0 {
+	for rem != 0 && avail > 0 {
 		pg := f.m[pi]
 		if pg == nil {
 			if pg, err = f.page(pi); err != nil {
