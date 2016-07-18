@@ -98,7 +98,7 @@ func (f *mem) ReadAt(b []byte, off int64) (n int, err error) {
 		err = io.EOF
 	}
 	var zeroPage *[]byte
-	for rem != 0 {
+	for rem != 0 && avail > 0 {
 		pg := f.m[pi]
 		if pg == nil {
 			if zeroPage == nil {
