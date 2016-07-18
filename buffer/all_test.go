@@ -1,3 +1,7 @@
+// Copyright 2016 The Internal Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package buffer
 
 import (
@@ -48,45 +52,6 @@ func init() {
 
 // ============================================================================
 
-func Test(t *testing.T) {
-	a := [1 << 10]*[]byte{}
-	m := map[*[]byte]struct{}{}
-	for i := range a {
-		p := Get(i)
-		if _, ok := m[p]; ok {
-			t.Fatal(i)
-		}
-
-		a[i] = p
-		m[p] = struct{}{}
-		b := *p
-		for j := range b {
-			b[j] = 123
-		}
-	}
-	for i := range a {
-		Put(a[i])
-	}
-	for i := range a {
-		p := Get(i)
-		if _, ok := m[p]; !ok {
-			t.Fatal(i)
-		}
-
-		delete(m, p)
-		b := *p
-		if g, e := len(b), i; g != e {
-			t.Fatal(g, e)
-		}
-
-		for j, v := range b[:cap(b)] {
-			if v != 0 {
-				t.Fatal(i, j, v)
-			}
-		}
-	}
-}
-
 func test(t testing.TB, allocs, goroutines int) {
 	ready := make(chan int, goroutines)
 	run := make(chan int)
@@ -104,16 +69,6 @@ func test(t testing.TB, allocs, goroutines int) {
 					break
 				}
 
-				for i, d := range b[:cap(b)] {
-					if d != 0 {
-						t.Error(v, i, d)
-						break
-					}
-				}
-
-				for i := range b {
-					b[i] = 123
-				}
 				Put(p)
 			}
 			done <- 1
@@ -129,7 +84,7 @@ func test(t testing.TB, allocs, goroutines int) {
 }
 
 func Test2(t *testing.T) {
-	test(t, 1<<14, 16)
+	test(t, 1<<15, 32)
 }
 
 func Benchmark1(b *testing.B) {

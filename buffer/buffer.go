@@ -1,3 +1,7 @@
+// Copyright 2016 The Internal Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 // Package buffer implements a pool of pointers to byte slices.
 //
 // Example usage pattern
@@ -55,8 +59,23 @@ func init() {
 	}
 }
 
+// CGet returns a pointer to a byte slice of len size. The pointed to byte
+// slice is zeroed up to its cap. CGet panics for size < 0.
+//
+// CGet is safe for concurrent use by multiple goroutines.
+func CGet(size int) *[]byte {
+	p := Get(size)
+	b := *p
+	b = b[:cap(b)]
+	for i := range b {
+		b[i] = 0
+	}
+	*p = b[:size]
+	return p
+}
+
 // Get returns a pointer to a byte slice of len size. The pointed to byte slice
-// is zeroed up to its cap. Get panics for size < 0.
+// is not zeroed. Get panics for size < 0.
 //
 // Get is safe for concurrent use by multiple goroutines.
 func Get(size int) *[]byte {
@@ -71,9 +90,6 @@ func Get(size int) *[]byte {
 	}
 	p := m[index].Get().(*[]byte)
 	b := *p
-	for i := range b[:cap(b)] {
-		b[i] = 0
-	}
 	*p = b[:size]
 	return p
 }
