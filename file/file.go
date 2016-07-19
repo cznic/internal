@@ -41,7 +41,7 @@ type Interface interface {
 }
 
 // Open returns a new Interface backed by f, or an error, if any.
-func Open(f *os.File) (Interface, error) { return newFile(f, 1<<30, 20), nil }
+func Open(f *os.File) (Interface, error) { return newFile(f, 1<<30, 20) }
 
 // OpenMem returns a new Interface, or an error, if any. The Interface content
 // is volatile, it's backed only by process' memory.
@@ -122,15 +122,6 @@ func (f *mem) Truncate(size int64) (err error) {
 		return fmt.Errorf("invalid truncate size: %d", size)
 	}
 
-	if size == 0 {
-		for pi, p := range f.m {
-			buffer.Put(p)
-			delete(f.m, pi)
-		}
-		f.size = 0
-		return nil
-	}
-
 	first := size >> f.pgBits
 	if size&int64(f.pgMask) != 0 {
 		first++
@@ -192,7 +183,7 @@ type file struct {
 	fsize    int64
 }
 
-func newFile(f *os.File, maxSize int64, pgBits uint) *file {
+func newFile(f *os.File, maxSize int64, pgBits uint) (*file, error) {
 	if maxSize < 0 {
 		panic("internal error")
 	}
@@ -205,7 +196,7 @@ func newFile(f *os.File, maxSize int64, pgBits uint) *file {
 		pgBits = uint(mathutil.Log2Uint64(uint64(pgSize / sysPage * sysPage)))
 	}
 	pgSize = 1 << pgBits
-	return &file{
+	fi := &file{
 		f: f,
 		m: fileMap{},
 		maxPages: int(mathutil.MinInt64(
@@ -216,6 +207,16 @@ func newFile(f *os.File, maxSize int64, pgBits uint) *file {
 		pgMask: pgSize - 1,
 		pgSize: pgSize,
 	}
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+
+	if err = fi.Truncate(info.Size()); err != nil {
+		return nil, err
+	}
+
+	return fi, nil
 }
 
 func (f *file) ReadFrom(r io.Reader) (n int64, err error) { return readFrom(f, r) }
@@ -223,6 +224,12 @@ func (f *file) Sync() (err error)                         { return f.f.Sync() }
 func (f *file) WriteTo(w io.Writer) (n int64, err error)  { return writeTo(f, w) }
 
 func (f *file) Close() (err error) {
+	for _, p := range f.m {
+		if err = p.Unmap(); err != nil {
+			return err
+		}
+	}
+
 	if err = f.f.Truncate(f.size); err != nil {
 		return err
 	}
@@ -310,18 +317,6 @@ func (f *file) Truncate(size int64) (err error) {
 		return fmt.Errorf("invalid truncate size: %d", size)
 	}
 
-	if size == 0 {
-		for pi, p := range f.m {
-			if err := p.Unmap(); err != nil {
-				return err
-			}
-
-			delete(f.m, pi)
-		}
-		f.size = 0
-		return nil
-	}
-
 	first := size >> f.pgBits
 	if size&int64(f.pgMask) != 0 {
 		first++
@@ -342,13 +337,13 @@ func (f *file) Truncate(size int64) (err error) {
 
 	f.size = size
 	fsize := (size + int64(f.pgSize) - 1) &^ int64(f.pgMask)
-	if fsize < f.fsize {
+	if fsize != f.fsize {
 		if err := f.f.Truncate(fsize); err != nil {
 			return err
 		}
 
-		f.fsize = fsize
 	}
+	f.fsize = fsize
 	return nil
 }
 
