@@ -4,7 +4,7 @@
 
 // +build !race
 
-package buffer
+package slice
 
 import (
 	"testing"
@@ -14,8 +14,9 @@ import (
 func Test(t *testing.T) {
 	a := [1 << 10]*[]byte{}
 	m := map[*[]byte]struct{}{}
+	pool := newBytes()
 	for i := range a {
-		p := CGet(i)
+		p := pool.CGet(i).(*[]byte)
 		if _, ok := m[p]; ok {
 			t.Fatal(i)
 		}
@@ -28,10 +29,10 @@ func Test(t *testing.T) {
 		}
 	}
 	for i := range a {
-		Put(a[i])
+		pool.Put(a[i])
 	}
 	for i := range a {
-		p := CGet(i)
+		p := pool.CGet(i).(*[]byte)
 		if _, ok := m[p]; !ok {
 			t.Fatal(i)
 		}
