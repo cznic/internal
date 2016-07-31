@@ -50,7 +50,8 @@ type Pool struct {
 	setSize func(interface{}, int)
 }
 
-// New returns a newly created Pool. Assuming the desired slice type is []T:
+// NewPool returns a newly created Pool. Assuming the desired slice type is
+// []T:
 //
 // The create function returns a *[]T of len == cap == size.
 //
@@ -60,7 +61,7 @@ type Pool struct {
 // The setSize function gets a *[]T and sets its len to size.
 //
 // The cap function gets a *[]T and returns its capacity.
-func New(
+func NewPool(
 	create func(size int) interface{},
 	clear func(interface{}),
 	setSize func(p interface{}, size int),
@@ -125,7 +126,7 @@ func (p *Pool) Put(b interface{}) {
 }
 
 func newBytes() *Pool {
-	return New(
+	return NewPool(
 		func(size int) interface{} { // create
 			b := make([]byte, size)
 			return &b
