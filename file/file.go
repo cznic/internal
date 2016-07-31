@@ -27,6 +27,32 @@ var (
 	sysPage = os.Getpagesize()
 )
 
+type options struct {
+	maxSize int64
+	pgBits  int
+}
+
+// Option is possibly passed to the Open* functions.
+type Option func(*options) error
+
+// MaxSize sets the maximum total size of memory a file backed Interface can
+// use.  Invalid size is ignored. This option is ignored by OpenMem.
+func MaxSize(size int64) Option {
+	return func(o *options) error {
+		o.maxSize = size
+		return nil
+	}
+}
+
+// PageBits sets the binary logarithm of the size of a memory page the internal
+// representation of an Interface will use. Invalid values of bits are ignored.
+func PageBits(bits int) Option {
+	return func(o *options) error {
+		o.pgBits = bits
+		return nil
+	}
+}
+
 // Interface is a file-like entity.
 type Interface interface {
 	io.ReaderAt
@@ -34,6 +60,7 @@ type Interface interface {
 	io.WriterAt
 	io.WriterTo
 
+	// Close automatically calls Sync().
 	Close() error
 	Stat() (os.FileInfo, error)
 	Sync() error
@@ -41,11 +68,44 @@ type Interface interface {
 }
 
 // Open returns a new Interface backed by f, or an error, if any.
-func Open(f *os.File) (Interface, error) { return newFile(f, 1<<30, 20) }
+//
+// f is "owned" by the Interface and is closed on Close(). The actual size of
+// the file reported by f.Stat() before Interface.Close() may be different than
+// the one reported by Interface.Stat(), which is the correct value to use.
+func Open(f *os.File, opts ...Option) (Interface, error) {
+	o := &options{
+		maxSize: 1 << 30,
+		pgBits:  20,
+	}
+	for _, opt := range opts {
+		if err := opt(o); err != nil {
+			return nil, err
+		}
+	}
+	if o.maxSize < 0 {
+		o.maxSize = 0
+	}
+	if o.pgBits < 0 {
+		o.pgBits = 0
+	}
+	return newFile(f, o.maxSize, uint(o.pgBits))
+}
 
 // OpenMem returns a new Interface, or an error, if any. The Interface content
-// is volatile, it's backed only by process' memory.
-func OpenMem(name string) (Interface, error) { return newMem(name, 18), nil }
+// is volatile, it's backed only by process' memory. The name parameter is
+// returned from Stat() but is otherwise unused.
+func OpenMem(name string, opts ...Option) (Interface, error) {
+	o := &options{}
+	for _, opt := range opts {
+		if err := opt(o); err != nil {
+			return nil, err
+		}
+	}
+	if o.pgBits <= 0 {
+		o.pgBits = 18
+	}
+	return newMem(name, uint(o.pgBits)), nil
+}
 
 type memMap map[int64]*[]byte
 
