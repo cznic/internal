@@ -14,6 +14,47 @@ import (
 // Bytes is a ready to use *[]byte Pool.
 var Bytes = newBytes()
 
+func newBytes() *Pool { // Separated b/c used by test.
+	return NewPool(
+		func(size int) interface{} { // create
+			b := make([]byte, size)
+			return &b
+		},
+		func(s interface{}) { // clear
+			b := *s.(*[]byte)
+			b = b[:cap(b)]
+			for i := range b {
+				b[i] = 0
+			}
+		},
+		func(s interface{}, size int) { // setSize
+			p := s.(*[]byte)
+			*p = (*p)[:size]
+		},
+		func(s interface{}) int { return cap(*s.(*[]byte)) }, // cap
+	)
+}
+
+// Ints is a ready to use *[]int Pool.
+var Ints = NewPool(
+	func(size int) interface{} { // create
+		b := make([]int, size)
+		return &b
+	},
+	func(s interface{}) { // clear
+		b := *s.(*[]int)
+		b = b[:cap(b)]
+		for i := range b {
+			b[i] = 0
+		}
+	},
+	func(s interface{}, size int) { // setSize
+		p := s.(*[]int)
+		*p = (*p)[:size]
+	},
+	func(s interface{}) int { return cap(*s.(*[]int)) }, // cap
+)
+
 // Pool implements a pool of pointers to slices.
 //
 // Example usage pattern (assuming pool is, for example, a *[]byte Pool)
@@ -123,25 +164,4 @@ func (p *Pool) Put(b interface{}) {
 	}
 
 	p.m[mathutil.Log2Uint64(uint64(size))].Put(b)
-}
-
-func newBytes() *Pool {
-	return NewPool(
-		func(size int) interface{} { // create
-			b := make([]byte, size)
-			return &b
-		},
-		func(s interface{}) { // clear
-			b := *s.(*[]byte)
-			b = b[:cap(b)]
-			for i := range b {
-				b[i] = 0
-			}
-		},
-		func(s interface{}, size int) { // setSize
-			p := s.(*[]byte)
-			*p = (*p)[:size]
-		},
-		func(s interface{}) int { return cap(*s.(*[]byte)) }, // cap
-	)
 }
