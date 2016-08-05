@@ -11,8 +11,34 @@ import (
 	"github.com/cznic/mathutil"
 )
 
-// Bytes is a ready to use *[]byte Pool.
-var Bytes = newBytes()
+var (
+	// Bytes is a ready to use *[]byte Pool.
+	Bytes *Pool
+	// Ints is a ready to use *[]int Pool.
+	Ints *Pool
+)
+
+func init() {
+	Bytes = newBytes()
+	Ints = NewPool(
+		func(size int) interface{} { // create
+			b := make([]int, size)
+			return &b
+		},
+		func(s interface{}) { // clear
+			b := *s.(*[]int)
+			b = b[:cap(b)]
+			for i := range b {
+				b[i] = 0
+			}
+		},
+		func(s interface{}, size int) { // setSize
+			p := s.(*[]int)
+			*p = (*p)[:size]
+		},
+		func(s interface{}) int { return cap(*s.(*[]int)) }, // cap
+	)
+}
 
 func newBytes() *Pool {
 	return NewPool(
@@ -32,30 +58,6 @@ func newBytes() *Pool {
 			*p = (*p)[:size]
 		},
 		func(s interface{}) int { return cap(*s.(*[]byte)) }, // cap
-	)
-}
-
-// Ints is a ready to use *[]int Pool.
-var Ints = newInts()
-
-func newInts() *Pool {
-	return NewPool(
-		func(size int) interface{} { // create
-			b := make([]int, size)
-			return &b
-		},
-		func(s interface{}) { // clear
-			b := *s.(*[]int)
-			b = b[:cap(b)]
-			for i := range b {
-				b[i] = 0
-			}
-		},
-		func(s interface{}, size int) { // setSize
-			p := s.(*[]int)
-			*p = (*p)[:size]
-		},
-		func(s interface{}) int { return cap(*s.(*[]int)) }, // cap
 	)
 }
 
