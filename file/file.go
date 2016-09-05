@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
+// Package file provides an os.File-like interface of a memory mapped file.
 package file
 
 import (
@@ -27,7 +28,7 @@ var (
 	sysPage = os.Getpagesize()
 )
 
-// Interface is a file-like entity.
+// Interface is a os.File-like entity.
 type Interface interface {
 	io.ReaderAt
 	io.ReaderFrom
