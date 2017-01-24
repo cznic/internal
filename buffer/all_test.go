@@ -5,6 +5,7 @@
 package buffer
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"os"
@@ -97,3 +98,85 @@ func Benchmark1(b *testing.B) {
 	}
 	b.SetBytes(goroutines * (allocs*allocs + allocs) / 2)
 }
+
+func TestBytes(t *testing.T) {
+	const N = 1e6
+	src := make([]byte, N)
+	for i := range src {
+		src[i] = byte(rand.Int())
+	}
+	var b Bytes
+	for i, v := range src {
+		b.WriteByte(v)
+		if g, e := b.Len(), i+1; g != e {
+			t.Fatal("Len", g, e)
+		}
+	}
+
+	if !bytes.Equal(b.Bytes(), src) {
+		t.Fatal("content differs")
+	}
+
+	b.Close()
+	if g, e := b.Len(), 0; g != e {
+		t.Fatal("Len", g, e)
+	}
+
+	if g, e := len(b.Bytes()), 0; g != e {
+		t.Fatal("Bytes", g, e)
+	}
+
+	s2 := src
+	for len(s2) != 0 {
+		n := rand.Intn(127)
+		if n > len(s2) {
+			n = len(s2)
+		}
+		n2, _ := b.Write(s2[:n])
+		if g, e := n2, n; g != e {
+			t.Fatal("Write", g, e)
+		}
+
+		s2 = s2[n:]
+	}
+
+	if !bytes.Equal(b.Bytes(), src) {
+		t.Fatal("content differs")
+	}
+
+	b.Close()
+	s2 = src
+	for len(s2) != 0 {
+		n := rand.Intn(31)
+		if n > len(s2) {
+			n = len(s2)
+		}
+		n2, _ := b.WriteString(string(s2[:n]))
+		if g, e := n2, n; g != e {
+			t.Fatal("Write", g, e)
+		}
+
+		s2 = s2[n:]
+	}
+
+	if !bytes.Equal(b.Bytes(), src) {
+		t.Fatal("content differs")
+	}
+}
+
+func benchmarkWriteByte(b *testing.B, n int) {
+	for i := 0; i < b.N; i++ {
+		var buf Bytes
+		for j := 0; j < n; j++ {
+			buf.WriteByte(0)
+		}
+		buf.Close()
+	}
+	b.SetBytes(int64(n))
+}
+
+func BenchmarkWriteByte_1e3(b *testing.B) { benchmarkWriteByte(b, 1e3) }
+func BenchmarkWriteByte_1e4(b *testing.B) { benchmarkWriteByte(b, 1e4) }
+func BenchmarkWriteByte_1e5(b *testing.B) { benchmarkWriteByte(b, 1e5) }
+func BenchmarkWriteByte_1e6(b *testing.B) { benchmarkWriteByte(b, 1e6) }
+func BenchmarkWriteByte_1e7(b *testing.B) { benchmarkWriteByte(b, 1e7) }
