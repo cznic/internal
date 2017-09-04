@@ -143,6 +143,10 @@ func (f *mem) Truncate(size int64) (err error) {
 }
 
 func (f *mem) WriteAt(b []byte, off int64) (n int, err error) {
+	if len(b) == 0 {
+		return 0, nil
+	}
+
 	pi := off >> f.pgBits
 	po := int(off) & f.pgMask
 	n = len(b)
@@ -349,6 +353,10 @@ func (f *file) Truncate(size int64) (err error) {
 }
 
 func (f *file) WriteAt(b []byte, off int64) (n int, err error) {
+	if len(b) == 0 {
+		return 0, nil
+	}
+
 	pi := off >> f.pgBits
 	po := int(off) & f.pgMask
 	n = len(b)
