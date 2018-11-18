@@ -1,8 +1,5 @@
-# internal
-Things that cannot be imported by 3rd party packages.
+`github.com/cznic/internal` has moved to [`modernc.org/internal`](https://godoc.org/modernc.org/internal) ([vcs](https://gitlab.com/cznic/internal)).
 
-Packages in this repository
+Please update your import paths to `modernc.org/internal`.
 
-* Package [buffer](https://godoc.org/github.com/cznic/internal/buffer) implements a pool of pointers to byte slices.
-* Package [file](https://godoc.org/github.com/cznic/internal/file) provides an os.File-like interface of a memory mapped file.
-* Package [slice](https://godoc.org/github.com/cznic/internal/slice) implements pools of pointers to slices.
+This repo is now archived.
